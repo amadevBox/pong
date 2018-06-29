@@ -2,8 +2,8 @@ const fieldHeight = 400
 const fieldWidth = 500
 
 class Platform {
-  constructor() {
-    this.x = 0
+  constructor(x) {
+    this.x = x
     this.y = (fieldHeight - Platform.height) / 2
   }
 
@@ -23,35 +23,31 @@ Platform.height = 100
 Platform.color = '#ff0000'
 Platform.speed = 20
 
-
 class Player extends Platform {
+  constructor(x, keyUpCode, keyDownCode) {
+    const y = (fieldHeight - Platform.height) / 2
+    super(x, y)
+    this.keyUpCode = keyUpCode
+    this.keyDownCode = keyDownCode
+  }
+
   movePlatformByEvent(e) {
-    const modifier = 1
     switch(e.keyCode) {
-      case 38: {
+      case this.keyUpCode: {
         if (this.y > 0) {
-          this.y -= Platform.speed * modifier
+          this.y -= Platform.speed
         }
         break
       }
-      case 40: {
+      case this.keyDownCode: {
         if (this.y < fieldHeight - Platform.height) {
-          this.y += Platform.speed * modifier
+          this.y += Platform.speed
         }
         break
       }
     }
   }
 }
-
-
-class Computer extends Platform {
-  constructor() {
-    super()
-    this.x = fieldWidth - Platform.width
-  }
-}
-
 
 class Boll {
   constructor() {
@@ -88,8 +84,8 @@ Boll.radius = 5
 const core = (pong) => {
   const {
     boll,
-    player,
-    computer,
+    player1,
+    player2,
     score,
   } = pong
 
@@ -102,136 +98,108 @@ const core = (pong) => {
     return
   }
 
-  if (boll.x - Boll.radius < Platform.width) {
+  if (boll.x - Boll.radius <= Platform.width) {
     // collision with platform
     if (
-      (boll.y + (Boll.radius * 2) >= player.y) &&
-      (boll.y - (Boll.radius * 2) <= player.y + Platform.height) &&
-      (boll.speed < 0)
+      (boll.y + Boll.radius >= player1.y) &&
+      (boll.y - Boll.radius <= player1.y + Platform.height) &&
+      (boll.speed * Math.cos(boll.angle) < 0)
     ) {
-      const shift = (player.y + (Platform.height / 2) - boll.y) / (Platform.height / 2)
+      const shift = (player1.y + (Platform.height / 2) - boll.y) / (Platform.height / 2)
       const shiftCoef = (shift / 2) + 0.5
 
-      boll.angle = shiftCoef * (Math.PI / 2) - Math.PI / 4
+      boll.angle = -(shiftCoef * (Math.PI / 2) - Math.PI / 4)
       boll.speed = -boll.speed
       return
     }
   }
 
+  if (boll.x + Boll.radius >= fieldWidth - Platform.width) {
+    // collision with platform
+    if (
+      (boll.y - Boll.radius >= player2.y) &&
+      (boll.y + Boll.radius <= player2.y + Platform.height) &&
+      (boll.speed * Math.cos(boll.angle) > 0)
+    ) {
+      const shift = (player2.y + (Platform.height / 2) - boll.y) / (Platform.height / 2)
+      const shiftCoef = (shift / 2) + 0.5
 
-  // if (boll.y >= fieldHeight - Platform.height - Boll.radius) {
-  //   if (
-  //     (boll.x + (Boll.radius * 2) >= platform.x) &&
-  //     (boll.x - (Boll.radius * 2) <= platform.x + Platform.width)
-  //   ) {
-  //     //boll.angle *= -1
-  //     const shift = (platform.x + (Platform.width / 2) - boll.x) / (Platform.width / 2)
-  //     const shiftCoef = (shift / 2) + 0.5
-  //     boll.angle = -(shiftCoef * (Math.PI / 2) + Math.PI / 4)
-  //     return
-  //   }
-  //
-  //   // else if (boll.y >= fieldHeight - Boll.radius) {
-  //   //   arkanoid.status = 'finish'
-  //   //   arkanoid.finish()
-  //   //   return
-  //   // }
-  // }
+      boll.angle = (shiftCoef * (Math.PI / 2) - Math.PI / 4)
+      boll.speed = -boll.speed
+      return
+    }
+  }
 
   if (boll.x <= Boll.radius) {
-    score.computer += 1
+    score.player2 += 1
     boll.setInitialProps('right')
     return
   }
 
   if (boll.x >= fieldWidth - Boll.radius) {
-    score.player += 1
+    score.player1 += 1
     boll.setInitialProps('left')
     return
   }
-
-  // for (let tilesRow of tiles) {
-  //   for (let tile of tilesRow) {
-  //     if (!tile.isAlive) continue
-  //     if (
-  //       boll.x - Boll.radius <= tile.x + Tile.width &&
-  //       boll.x + Boll.radius >= tile.x &&
-  //       boll.y - Boll.radius <= tile.y + Tile.height &&
-  //       boll.y + Boll.radius >= tile.y
-  //     ) {
-  //       tile.isAlive = false
-  //       boll.angle *= -1
-  //       return
-  //     }
-  //   }
-  // }
 }
 
-const renderScore = (ctx, score) => {
-  const {
-    player,
-    computer,
-  } = score
-
+const renderScore = (ctx, {player1, player2}) => {
   ctx.fillStyle = 'red'
   ctx.textAlign = 'center'
   ctx.font = '35px Comic Sans MS'
-  ctx.fillText(`${player}:${computer}`, fieldWidth / 2, 50)
+  ctx.fillText(`${player1}:${player2}`, fieldWidth / 2, 50)
 }
 
 const requestAnimationFrame = window.requestAnimationFrame
 
 const render = (ctx, pong) => {
-  // console.log('boll', pong.boll)
-  // console.log('player', pong.player)
-
   const {
-    player,
-    computer,
+    player1,
+    player2,
     boll,
     score,
   } = pong
 
-  boll.y += (boll.speed * Math.sin(boll.angle))
-  boll.x += (boll.speed * Math.cos(boll.angle))
+  core(pong)
+
+  boll.y += Math.round(boll.speed * Math.sin(boll.angle))
+  boll.x += Math.round(boll.speed * Math.cos(boll.angle))
+
   ctx.clearRect(0, 0, fieldWidth, fieldHeight)
 
   renderScore(ctx, score)
-  player.draw(ctx)
-  computer.draw(ctx)
+
+  player1.draw(ctx)
+  player2.draw(ctx)
   boll.draw(ctx)
 
-  core(pong)
-
-  if (flag) {
-    requestAnimationFrame(() => render(ctx, pong))
-  }
+  requestAnimationFrame(() => render(ctx, pong))
 }
-
-var flag = true
-// setTimeout(() => {
-//   flag = false
-// }, 5000)
 
 window.onload = () => {
   const canvas = document.getElementById('field')
   const ctx = canvas.getContext('2d')
 
+  const player1 = new Player(0, 87, 83)
+  const player2 = new Player(fieldWidth - Platform.width, 38, 40)
+
   const pong = {
-    player: new Player(),
-    computer: new Computer(),
+    player1,
+    player2,
     boll: new Boll(),
     score: {
-      player: 0,
-      computer: 0,
+      player1: 0,
+      player2: 0,
     },
   }
 
-  console.log(pong)
-
   addEventListener(
     'keydown',
-    pong.player.movePlatformByEvent.bind(pong.player)
+    (e) => {
+      player1.movePlatformByEvent.bind(player1)(e)
+      player2.movePlatformByEvent.bind(player2)(e)
+    }
   )
+
   render(ctx, pong)
 }
