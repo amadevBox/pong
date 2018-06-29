@@ -63,7 +63,7 @@ class Boll {
     this.x = fieldWidth / 2
     this.y = fieldHeight / 2
     this.angle = Math.random() * (Math.PI / 2) - Math.PI / 4
-    Boll.speed = directionKoef * Math.abs(Boll.speed)
+    this.speed = directionKoef * Math.abs(Boll.initialSpeed)
   }
 
   draw(ctx) {
@@ -81,10 +81,9 @@ class Boll {
   }
 }
 
+Boll.initialSpeed = 4
 Boll.color = '#00ff00'
-Boll.radius = 8
-Boll.speed = 4
-
+Boll.radius = 5
 
 const core = (pong) => {
   const {
@@ -98,22 +97,23 @@ const core = (pong) => {
     (boll.y <= Boll.radius) ||
     (boll.y + Boll.radius >= fieldHeight)
   ) {
-    Boll.speed = -Boll.speed
+    boll.speed = -boll.speed
     boll.angle = Math.PI - boll.angle
     return
   }
 
   if (boll.x - Boll.radius < Platform.width) {
+    // collision with platform
     if (
       (boll.y + (Boll.radius * 2) >= player.y) &&
-      (boll.y - (Boll.radius * 2) <= player.y + Platform.height)
+      (boll.y - (Boll.radius * 2) <= player.y + Platform.height) &&
+      (boll.speed < 0)
     ) {
       const shift = (player.y + (Platform.height / 2) - boll.y) / (Platform.height / 2)
       const shiftCoef = (shift / 2) + 0.5
 
       boll.angle = shiftCoef * (Math.PI / 2) - Math.PI / 4
-      Boll.speed = -Boll.speed
-
+      boll.speed = -boll.speed
       return
     }
   }
@@ -179,10 +179,12 @@ const renderScore = (ctx, score) => {
   ctx.fillText(`${player}:${computer}`, fieldWidth / 2, 50)
 }
 
-
 const requestAnimationFrame = window.requestAnimationFrame
 
 const render = (ctx, pong) => {
+  // console.log('boll', pong.boll)
+  // console.log('player', pong.player)
+
   const {
     player,
     computer,
@@ -190,8 +192,8 @@ const render = (ctx, pong) => {
     score,
   } = pong
 
-  boll.y += (Boll.speed * Math.sin(boll.angle))
-  boll.x += (Boll.speed * Math.cos(boll.angle))
+  boll.y += (boll.speed * Math.sin(boll.angle))
+  boll.x += (boll.speed * Math.cos(boll.angle))
   ctx.clearRect(0, 0, fieldWidth, fieldHeight)
 
   renderScore(ctx, score)
@@ -201,9 +203,15 @@ const render = (ctx, pong) => {
 
   core(pong)
 
-  requestAnimationFrame(() => render(ctx, pong))
+  if (flag) {
+    requestAnimationFrame(() => render(ctx, pong))
+  }
 }
 
+var flag = true
+// setTimeout(() => {
+//   flag = false
+// }, 5000)
 
 window.onload = () => {
   const canvas = document.getElementById('field')
